@@ -1,7 +1,8 @@
 import { Html, Line, OrbitControls, Stars, useTexture } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, ChevronRight, MapPin, Thermometer, Timer, Waves, Wind, X } from "lucide-react";
+import { Camera, ChevronRight, MapPin, Thermometer, Timer, Users, Waves, Wind, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Suspense, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -476,6 +477,21 @@ export function ExpeditionTouchwall() {
             />
           </Suspense>
         </Canvas>
+      </div>
+
+      {/* ════════════════════════════════════════════
+          CREW ATLAS LINK — top-right corner
+      ════════════════════════════════════════════ */}
+      <div className="pointer-events-auto absolute right-8 top-8 z-20 lg:right-10">
+        <Link
+          to="/crew"
+          aria-label="Bekijk de bemanning en wetenschappelijke atlas"
+          className="flex items-center gap-2.5 rounded-full border border-white/12 bg-black/30 px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.24em] text-white/55 backdrop-blur-sm transition-all duration-200 hover:border-white/25 hover:bg-white/10 hover:text-white/85 focus:outline-none focus:ring-2 focus:ring-white/25"
+        >
+          <Users className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden sm:inline">Crew & Science Atlas</span>
+          <span className="sm:hidden">Atlas</span>
+        </Link>
       </div>
 
       {/* ════════════════════════════════════════════
