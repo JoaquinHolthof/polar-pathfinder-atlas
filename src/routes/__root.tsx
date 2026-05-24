@@ -37,6 +37,10 @@ export const Route = createRootRoute({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Belgica Expedition Touchwall" },
+      { name: "twitter:description", content: "Interactive museum touchwall for the 1897 Belgica Antarctica expedition." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b8d888e7-a362-41fb-ba8e-5c5f755bc975/id-preview-f1288403--95039f9f-6f48-409d-8121-150bf9faf73b.lovable.app-1779625507378.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b8d888e7-a362-41fb-ba8e-5c5f755bc975/id-preview-f1288403--95039f9f-6f48-409d-8121-150bf9faf73b.lovable.app-1779625507378.png" },
     ],
     links: [
       {
