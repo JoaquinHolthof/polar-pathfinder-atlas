@@ -656,28 +656,8 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
           );
         })()}
 
-        {/* ── Footstep path across the Antarctic landmass ── */}
-        {progress >= LAND_START && (() => {
-          const landT = (progress - LAND_START) / (1 - LAND_START);
-          return footstepRoute.map((step, i) => {
-            const stepT = landT * NUM_FOOTSTEPS - i;
-            if (stepT <= 0) return null;
-            const freshness  = Math.min(1, stepT);
-            const trailDecay = Math.exp(-0.4 * Math.max(0, stepT - 1));
-            const opacity    = THREE.MathUtils.lerp(0.18, 0.88, freshness) * (0.3 + 0.7 * trailDecay);
-            const color      = _DARK_RED.clone().lerp(_BRIGHT_RED, trailDecay);
-            return (
-              <FootprintMesh
-                key={i}
-                position={step.position}
-                quaternion={step.quaternion}
-                isLeft={step.isLeft}
-                opacity={opacity}
-                color={color}
-              />
-            );
-          });
-        })()}
+        {/* Footstep walking path removed — all milestones are now connected
+            by dashed sea/flight arcs (ships in 1897, aircraft from 1958). */}
       </group>
 
       <OrbitControls
