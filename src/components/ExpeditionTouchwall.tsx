@@ -194,69 +194,26 @@ function makeArcPoints(stops: ExpeditionStop[]) {
   );
 }
 
-function generateFootstepRoute(): FootstepData[] {
-  const dLat    = STATION_LAT - LANDING_LAT;   // −7.05 deg  (southward)
-  const dLon    = STATION_LON - LANDING_LON;   // +86.35 deg (eastward)
-  const pathLen = Math.sqrt(dLat * dLat + dLon * dLon);
-  // Unit perpendicular in lat/lon space (rotated 90° CCW from path direction)
-  const perpLat = -dLon / pathLen;
-  const perpLon  =  dLat / pathLen;
-
-  const steps: FootstepData[] = [];
-
-  for (let i = 0; i < NUM_FOOTSTEPS; i++) {
-    const t         = i / (NUM_FOOTSTEPS - 1);
-    // Subtle lateral sway only — the traverse is a short local walk between
-    // two stations on the same continental shelf, so we stay on the corridor
-    // and never deviate over open ocean.
-    const deviation = 0.45 * Math.sin(t * Math.PI);
-
-    const lat = LANDING_LAT + dLat * t + perpLat * deviation;
-    const lon = LANDING_LON + dLon * t + perpLon * deviation;
-
-    // Reference point for heading (next step, or previous for the final step)
-    const refIdx = i < NUM_FOOTSTEPS - 1 ? i + 1 : i - 1;
-    const tRef   = refIdx / (NUM_FOOTSTEPS - 1);
-    const devRef = 0.45 * Math.sin(tRef * Math.PI);
-    const latRef = LANDING_LAT + dLat * tRef + perpLat * devRef;
-    const lonRef = LANDING_LON + dLon * tRef + perpLon * devRef;
-
-    const pos    = latLonToVector3(lat,    lon,    2.01);
-    const posRef = latLonToVector3(latRef, lonRef, 2.01);
-    const normal = pos.clone().normalize();
-
-    // Project heading onto the surface tangent plane
-    let fwd = i < NUM_FOOTSTEPS - 1
-      ? posRef.clone().sub(pos)
-      : pos.clone().sub(posRef);
-    fwd.sub(normal.clone().multiplyScalar(fwd.dot(normal))).normalize();
-
-    const right = new THREE.Vector3().crossVectors(normal, fwd).normalize();
-
-    // Quaternion convention: X = right, Y = surface normal (up), Z = forward
-    const baseQuat = new THREE.Quaternion().setFromRotationMatrix(
-      new THREE.Matrix4().makeBasis(right, normal, fwd),
-    );
-
-    // Toe-in: subtle inward rotation around local Y (surface normal)
-    const isLeft = i % 2 === 0;
-    const localToeQuat = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      isLeft ? 0.12 : -0.12,
-    );
-    const finalQuat = baseQuat.clone().multiply(localToeQuat);
-
-    // Alternating lateral offset perpendicular to heading
-    const lateralOffset = right.clone().multiplyScalar((isLeft ? -1 : 1) * 0.009);
-
-    steps.push({
-      position: pos.clone().add(lateralOffset),
-      quaternion: finalQuat,
-      isLeft,
-    });
-  }
-
-  return steps;
+function makeGreatCircle(
+  startLat: number, startLon: number,
+  endLat: number, endLon: number,
+  arcHeight = 0.18,
+  segments = 72,
+) {
+  const sv = latLonToVector3(startLat, startLon, 2.1).normalize();
+  const ev = latLonToVector3(endLat, endLon, 2.1).normalize();
+  const angle = sv.angleTo(ev);
+  const sin = Math.sin(angle);
+  return Array.from({ length: segments }, (_, i) => {
+    const t = i / (segments - 1);
+    const p = sv
+      .clone()
+      .multiplyScalar(Math.sin((1 - t) * angle) / sin)
+      .add(ev.clone().multiplyScalar(Math.sin(t * angle) / sin))
+      .normalize();
+    const alt = 2.11 + Math.sin(t * Math.PI) * arcHeight;
+    return p.multiplyScalar(alt);
+  });
 }
 
 function getPassage(progress: number): Passage {
@@ -405,9 +362,10 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
     [],
   );
 
-  // Zeeroute bevriest zodra de landfase begint
+  // Sea route fills 0 → boudewijnStop.progress so the Antwerp→Belgica arc is
+  // complete before the dashed inter-era flight lines appear.
   const visiblePath = useMemo(() => {
-    const capped = Math.min(progress, LAND_START);
+    const capped = Math.min(progress / expeditionStops[2].progress, 1);
     const count  = Math.max(2, Math.ceil(pathPoints.length * capped));
     return pathPoints.slice(0, count);
   }, [pathPoints, progress]);
@@ -434,21 +392,38 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
     ),
   }), []);
 
-  const footstepRoute = useMemo(() => generateFootstepRoute(), []);
+  // Dashed inter-era flight arcs between Antarctic milestones.
+  // Different eras / locations — drawn as airline-style dashed great circles.
+  const belgicaStop   = expeditionStops[1];
+  const boudewijnStop = expeditionStops[2];
+  const elisabethStop = expeditionStops[3];
+  const belgicaToBoudewijn = useMemo(
+    () => makeGreatCircle(belgicaStop.lat, belgicaStop.lon, boudewijnStop.lat, boudewijnStop.lon, 0.22),
+    [],
+  );
+  const boudewijnToElisabeth = useMemo(
+    () => makeGreatCircle(boudewijnStop.lat, boudewijnStop.lon, elisabethStop.lat, elisabethStop.lon, 0.06, 36),
+    [],
+  );
 
   useFrame(({ camera, clock }) => {
-    // Globe rotation: volgt zeeroute → pant naar station tijdens landfase
+    // Globe rotation: follow sea route, then pan to Boudewijn, then Elisabeth.
     if (groupRef.current) {
       let focusVec: THREE.Vector3;
-      if (progress >= LAND_START) {
-        const seaEnd    = pathPoints[pathPoints.length - 1].clone().normalize();
-        const stationV  = latLonToVector3(STATION_LAT, STATION_LON, 2.1).normalize();
-        const t = (progress - LAND_START) / (1 - LAND_START);
-        focusVec = seaEnd.lerp(stationV, t).normalize();
+      const boudewijnV = latLonToVector3(boudewijnStop.lat, boudewijnStop.lon, 2.1).normalize();
+      const elisabethV = latLonToVector3(elisabethStop.lat, elisabethStop.lon, 2.1).normalize();
+
+      if (progress >= boudewijnStop.progress) {
+        // Pan smoothly from Boudewijn → midpoint → Elisabeth as timeline advances
+        const t = THREE.MathUtils.clamp(
+          (progress - boudewijnStop.progress) / (elisabethStop.progress - boudewijnStop.progress),
+          0, 1,
+        );
+        focusVec = boudewijnV.clone().lerp(elisabethV, t).normalize();
       } else {
         const idx = Math.min(
           pathPoints.length - 1,
-          Math.max(0, Math.floor(progress * (pathPoints.length - 1))),
+          Math.max(0, Math.floor((progress / boudewijnStop.progress) * (pathPoints.length - 1))),
         );
         focusVec = pathPoints[idx].clone().normalize();
       }
@@ -456,9 +431,20 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
       groupRef.current.quaternion.slerp(target, 0.085);
     }
 
-    // Camera gentle zoom-in toward Antarctica at 100%
-    const eased = 1 - Math.pow(1 - progress, 2.25);
-    const targetZ = THREE.MathUtils.lerp(6.65, 5.5, eased);
+    // Camera zoom: gentle along sea route, much closer once on the Antarctic
+    // stations so Boudewijn & Elisabeth labels separate visually.
+    let targetZ: number;
+    if (progress < boudewijnStop.progress) {
+      const t = progress / boudewijnStop.progress;
+      targetZ = THREE.MathUtils.lerp(6.65, 5.6, 1 - Math.pow(1 - t, 2.25));
+    } else {
+      const t = THREE.MathUtils.clamp(
+        (progress - boudewijnStop.progress) / (1 - boudewijnStop.progress),
+        0, 1,
+      );
+      // Strong zoom-in: 5.6 → 3.6 brings the two stations apart on screen
+      targetZ = THREE.MathUtils.lerp(5.6, 3.6, 1 - Math.pow(1 - t, 1.8));
+    }
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.075);
     camera.lookAt(0, 0, 0);
 
@@ -506,14 +492,38 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
           <primitive object={earthMaterial} attach="material" />
         </mesh>
 
-        {/* Expedition path */}
+        {/* Sea route: Antwerpen → De Belgica Expeditie (solid red) */}
         {visiblePath.length >= 2 && (
           <>
-            {/* Core red line */}
             <Line points={visiblePath} color="#ef4444" lineWidth={3.5} transparent opacity={0.92} />
-            {/* Soft glow bloom */}
             <Line points={visiblePath} color="#ff8080" lineWidth={10} transparent opacity={0.22} />
           </>
+        )}
+
+        {/* Inter-era flight arcs (dashed) — appear when timeline reaches them */}
+        {progress + 0.035 >= boudewijnStop.progress && (
+          <Line
+            points={belgicaToBoudewijn}
+            color="#fca5a5"
+            lineWidth={2}
+            transparent
+            opacity={0.78}
+            dashed
+            dashSize={0.08}
+            gapSize={0.06}
+          />
+        )}
+        {progress + 0.035 >= elisabethStop.progress && (
+          <Line
+            points={boudewijnToElisabeth}
+            color="#7dd3fc"
+            lineWidth={2}
+            transparent
+            opacity={0.82}
+            dashed
+            dashSize={0.05}
+            gapSize={0.04}
+          />
         )}
 
         {/* Hotspot markers */}
@@ -647,28 +657,8 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
           );
         })()}
 
-        {/* ── Footstep path across the Antarctic landmass ── */}
-        {progress >= LAND_START && (() => {
-          const landT = (progress - LAND_START) / (1 - LAND_START);
-          return footstepRoute.map((step, i) => {
-            const stepT = landT * NUM_FOOTSTEPS - i;
-            if (stepT <= 0) return null;
-            const freshness  = Math.min(1, stepT);
-            const trailDecay = Math.exp(-0.4 * Math.max(0, stepT - 1));
-            const opacity    = THREE.MathUtils.lerp(0.18, 0.88, freshness) * (0.3 + 0.7 * trailDecay);
-            const color      = _DARK_RED.clone().lerp(_BRIGHT_RED, trailDecay);
-            return (
-              <FootprintMesh
-                key={i}
-                position={step.position}
-                quaternion={step.quaternion}
-                isLeft={step.isLeft}
-                opacity={opacity}
-                color={color}
-              />
-            );
-          });
-        })()}
+        {/* Footstep walking path removed — all milestones are now connected
+            by dashed sea/flight arcs (ships in 1897, aircraft from 1958). */}
       </group>
 
       <OrbitControls
