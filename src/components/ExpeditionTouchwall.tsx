@@ -194,69 +194,26 @@ function makeArcPoints(stops: ExpeditionStop[]) {
   );
 }
 
-function generateFootstepRoute(): FootstepData[] {
-  const dLat    = STATION_LAT - LANDING_LAT;   // −7.05 deg  (southward)
-  const dLon    = STATION_LON - LANDING_LON;   // +86.35 deg (eastward)
-  const pathLen = Math.sqrt(dLat * dLat + dLon * dLon);
-  // Unit perpendicular in lat/lon space (rotated 90° CCW from path direction)
-  const perpLat = -dLon / pathLen;
-  const perpLon  =  dLat / pathLen;
-
-  const steps: FootstepData[] = [];
-
-  for (let i = 0; i < NUM_FOOTSTEPS; i++) {
-    const t         = i / (NUM_FOOTSTEPS - 1);
-    // Subtle lateral sway only — the traverse is a short local walk between
-    // two stations on the same continental shelf, so we stay on the corridor
-    // and never deviate over open ocean.
-    const deviation = 0.45 * Math.sin(t * Math.PI);
-
-    const lat = LANDING_LAT + dLat * t + perpLat * deviation;
-    const lon = LANDING_LON + dLon * t + perpLon * deviation;
-
-    // Reference point for heading (next step, or previous for the final step)
-    const refIdx = i < NUM_FOOTSTEPS - 1 ? i + 1 : i - 1;
-    const tRef   = refIdx / (NUM_FOOTSTEPS - 1);
-    const devRef = 0.45 * Math.sin(tRef * Math.PI);
-    const latRef = LANDING_LAT + dLat * tRef + perpLat * devRef;
-    const lonRef = LANDING_LON + dLon * tRef + perpLon * devRef;
-
-    const pos    = latLonToVector3(lat,    lon,    2.01);
-    const posRef = latLonToVector3(latRef, lonRef, 2.01);
-    const normal = pos.clone().normalize();
-
-    // Project heading onto the surface tangent plane
-    let fwd = i < NUM_FOOTSTEPS - 1
-      ? posRef.clone().sub(pos)
-      : pos.clone().sub(posRef);
-    fwd.sub(normal.clone().multiplyScalar(fwd.dot(normal))).normalize();
-
-    const right = new THREE.Vector3().crossVectors(normal, fwd).normalize();
-
-    // Quaternion convention: X = right, Y = surface normal (up), Z = forward
-    const baseQuat = new THREE.Quaternion().setFromRotationMatrix(
-      new THREE.Matrix4().makeBasis(right, normal, fwd),
-    );
-
-    // Toe-in: subtle inward rotation around local Y (surface normal)
-    const isLeft = i % 2 === 0;
-    const localToeQuat = new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0, 1, 0),
-      isLeft ? 0.12 : -0.12,
-    );
-    const finalQuat = baseQuat.clone().multiply(localToeQuat);
-
-    // Alternating lateral offset perpendicular to heading
-    const lateralOffset = right.clone().multiplyScalar((isLeft ? -1 : 1) * 0.009);
-
-    steps.push({
-      position: pos.clone().add(lateralOffset),
-      quaternion: finalQuat,
-      isLeft,
-    });
-  }
-
-  return steps;
+function makeGreatCircle(
+  startLat: number, startLon: number,
+  endLat: number, endLon: number,
+  arcHeight = 0.18,
+  segments = 72,
+) {
+  const sv = latLonToVector3(startLat, startLon, 2.1).normalize();
+  const ev = latLonToVector3(endLat, endLon, 2.1).normalize();
+  const angle = sv.angleTo(ev);
+  const sin = Math.sin(angle);
+  return Array.from({ length: segments }, (_, i) => {
+    const t = i / (segments - 1);
+    const p = sv
+      .clone()
+      .multiplyScalar(Math.sin((1 - t) * angle) / sin)
+      .add(ev.clone().multiplyScalar(Math.sin(t * angle) / sin))
+      .normalize();
+    const alt = 2.11 + Math.sin(t * Math.PI) * arcHeight;
+    return p.multiplyScalar(alt);
+  });
 }
 
 function getPassage(progress: number): Passage {
