@@ -391,21 +391,38 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
     ),
   }), []);
 
-  const footstepRoute = useMemo(() => generateFootstepRoute(), []);
+  // Dashed inter-era flight arcs between Antarctic milestones.
+  // Different eras / locations — drawn as airline-style dashed great circles.
+  const belgicaStop   = expeditionStops[1];
+  const boudewijnStop = expeditionStops[2];
+  const elisabethStop = expeditionStops[3];
+  const belgicaToBoudewijn = useMemo(
+    () => makeGreatCircle(belgicaStop.lat, belgicaStop.lon, boudewijnStop.lat, boudewijnStop.lon, 0.22),
+    [],
+  );
+  const boudewijnToElisabeth = useMemo(
+    () => makeGreatCircle(boudewijnStop.lat, boudewijnStop.lon, elisabethStop.lat, elisabethStop.lon, 0.06, 36),
+    [],
+  );
 
   useFrame(({ camera, clock }) => {
-    // Globe rotation: volgt zeeroute → pant naar station tijdens landfase
+    // Globe rotation: follow sea route, then pan to Boudewijn, then Elisabeth.
     if (groupRef.current) {
       let focusVec: THREE.Vector3;
-      if (progress >= LAND_START) {
-        const seaEnd    = pathPoints[pathPoints.length - 1].clone().normalize();
-        const stationV  = latLonToVector3(STATION_LAT, STATION_LON, 2.1).normalize();
-        const t = (progress - LAND_START) / (1 - LAND_START);
-        focusVec = seaEnd.lerp(stationV, t).normalize();
+      const boudewijnV = latLonToVector3(boudewijnStop.lat, boudewijnStop.lon, 2.1).normalize();
+      const elisabethV = latLonToVector3(elisabethStop.lat, elisabethStop.lon, 2.1).normalize();
+
+      if (progress >= boudewijnStop.progress) {
+        // Pan smoothly from Boudewijn → midpoint → Elisabeth as timeline advances
+        const t = THREE.MathUtils.clamp(
+          (progress - boudewijnStop.progress) / (elisabethStop.progress - boudewijnStop.progress),
+          0, 1,
+        );
+        focusVec = boudewijnV.clone().lerp(elisabethV, t).normalize();
       } else {
         const idx = Math.min(
           pathPoints.length - 1,
-          Math.max(0, Math.floor(progress * (pathPoints.length - 1))),
+          Math.max(0, Math.floor((progress / boudewijnStop.progress) * (pathPoints.length - 1))),
         );
         focusVec = pathPoints[idx].clone().normalize();
       }
@@ -413,9 +430,20 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
       groupRef.current.quaternion.slerp(target, 0.085);
     }
 
-    // Camera gentle zoom-in toward Antarctica at 100%
-    const eased = 1 - Math.pow(1 - progress, 2.25);
-    const targetZ = THREE.MathUtils.lerp(6.65, 5.5, eased);
+    // Camera zoom: gentle along sea route, much closer once on the Antarctic
+    // stations so Boudewijn & Elisabeth labels separate visually.
+    let targetZ: number;
+    if (progress < boudewijnStop.progress) {
+      const t = progress / boudewijnStop.progress;
+      targetZ = THREE.MathUtils.lerp(6.65, 5.6, 1 - Math.pow(1 - t, 2.25));
+    } else {
+      const t = THREE.MathUtils.clamp(
+        (progress - boudewijnStop.progress) / (1 - boudewijnStop.progress),
+        0, 1,
+      );
+      // Strong zoom-in: 5.6 → 3.6 brings the two stations apart on screen
+      targetZ = THREE.MathUtils.lerp(5.6, 3.6, 1 - Math.pow(1 - t, 1.8));
+    }
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.075);
     camera.lookAt(0, 0, 0);
 
