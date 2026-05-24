@@ -491,14 +491,38 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
           <primitive object={earthMaterial} attach="material" />
         </mesh>
 
-        {/* Expedition path */}
+        {/* Sea route: Antwerpen → De Belgica Expeditie (solid red) */}
         {visiblePath.length >= 2 && (
           <>
-            {/* Core red line */}
             <Line points={visiblePath} color="#ef4444" lineWidth={3.5} transparent opacity={0.92} />
-            {/* Soft glow bloom */}
             <Line points={visiblePath} color="#ff8080" lineWidth={10} transparent opacity={0.22} />
           </>
+        )}
+
+        {/* Inter-era flight arcs (dashed) — appear when timeline reaches them */}
+        {progress + 0.035 >= boudewijnStop.progress && (
+          <Line
+            points={belgicaToBoudewijn}
+            color="#fca5a5"
+            lineWidth={2}
+            transparent
+            opacity={0.78}
+            dashed
+            dashSize={0.08}
+            gapSize={0.06}
+          />
+        )}
+        {progress + 0.035 >= elisabethStop.progress && (
+          <Line
+            points={boudewijnToElisabeth}
+            color="#7dd3fc"
+            lineWidth={2}
+            transparent
+            opacity={0.82}
+            dashed
+            dashSize={0.05}
+            gapSize={0.04}
+          />
         )}
 
         {/* Hotspot markers */}
