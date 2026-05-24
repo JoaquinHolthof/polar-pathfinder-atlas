@@ -1,7 +1,7 @@
 [build]
   base = "polar-pathfinder-atlas-main"
   command = "npm run build"
-  publish = "polar-pathfinder-atlas-main/dist"
+  publish = "dist"
 
 [[redirects]]
   from = "/*"
