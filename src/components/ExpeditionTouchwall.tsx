@@ -543,23 +543,34 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
                 <sphereGeometry args={[active ? 0.075 : 0.062, 32, 32]} />
                 <meshBasicMaterial color={coreColor} />
               </mesh>
-              {available && (
-                <Html center distanceFactor={14} position={[0, 0.26, 0]} className="pointer-events-none select-none">
-                  <div style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                    <span style={{
-                      fontSize: isStation ? "10px" : "11px",
-                      fontWeight: 600,
-                      color: labelColor,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
-                      lineHeight: 1,
-                    }}>
-                      {stop.name}
-                    </span>
-                  </div>
-                </Html>
-              )}
+              {available && (() => {
+                // Stagger label vertical offsets so Boudewijn (1958) and
+                // Elisabeth (2007) — which sit only ~2° apart in Dronning
+                // Maud Land — never overlap on screen.
+                const labelOffset: Record<HotspotId, [number, number, number]> = {
+                  antwerp:   [0,  0.30, 0],
+                  belgica:   [0,  0.30, 0],
+                  boudewijn: [0,  0.40, 0],
+                  elisabeth: [0, -0.34, 0],
+                };
+                return (
+                  <Html center distanceFactor={14} position={labelOffset[stop.id]} className="pointer-events-none select-none">
+                    <div style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                      <span style={{
+                        fontSize: isStation ? "10px" : "11px",
+                        fontWeight: 600,
+                        color: labelColor,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
+                        lineHeight: 1,
+                      }}>
+                        {stop.name}
+                      </span>
+                    </div>
+                  </Html>
+                );
+              })()}
             </group>
           );
         })}
