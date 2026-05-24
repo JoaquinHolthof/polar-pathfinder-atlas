@@ -270,8 +270,11 @@ function getPassage(progress: number): Passage {
 const LAND_START = 0.965;
 // Princess Elisabeth Station (Utsteinen, Koningin Maudland)
 const STATION_LAT = -71.9502, STATION_LON = 23.347;
-// Belgica expedition Antarctic landing site (western Antarctic Peninsula)
-const LANDING_LAT = -64.9, LANDING_LON = -63.0;
+// Local Antarctic traverse: from Basis Koning Boudewijn (1958, coast of
+// Prinses Ragnhildkust) to Princess Elisabeth Station (2007, inland Utsteinen).
+// Both sit on the Dronning Maud Land continental shelf — the footstep path
+// therefore stays entirely on the Antarctic landmass and never crosses ocean.
+const LANDING_LAT = -70.43, LANDING_LON = 20.0;
 const NUM_FOOTSTEPS = 34;
 
 // Antarctische bergtoppen langs de route (realistischer gespreide locaties)
