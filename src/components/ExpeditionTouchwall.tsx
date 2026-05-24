@@ -206,10 +206,10 @@ function generateFootstepRoute(): FootstepData[] {
 
   for (let i = 0; i < NUM_FOOTSTEPS; i++) {
     const t         = i / (NUM_FOOTSTEPS - 1);
-    // Single southward arc: peaks at t=0.5 deep into the continental interior
-    // (Filchner Ice Shelf ~lat −77°, lon −21°) then returns to the station.
-    // Replaces the original S-curve whose northern lobe looped over open ocean.
-    const deviation = 9.0 * Math.sin(t * Math.PI);
+    // Subtle lateral sway only — the traverse is a short local walk between
+    // two stations on the same continental shelf, so we stay on the corridor
+    // and never deviate over open ocean.
+    const deviation = 0.45 * Math.sin(t * Math.PI);
 
     const lat = LANDING_LAT + dLat * t + perpLat * deviation;
     const lon = LANDING_LON + dLon * t + perpLon * deviation;
@@ -217,7 +217,7 @@ function generateFootstepRoute(): FootstepData[] {
     // Reference point for heading (next step, or previous for the final step)
     const refIdx = i < NUM_FOOTSTEPS - 1 ? i + 1 : i - 1;
     const tRef   = refIdx / (NUM_FOOTSTEPS - 1);
-    const devRef = 9.0 * Math.sin(tRef * Math.PI);
+    const devRef = 0.45 * Math.sin(tRef * Math.PI);
     const latRef = LANDING_LAT + dLat * tRef + perpLat * devRef;
     const lonRef = LANDING_LON + dLon * tRef + perpLon * devRef;
 
