@@ -170,9 +170,11 @@ function latLonToVector3(lat: number, lon: number, radius = 2.08) {
 }
 
 function makeArcPoints(stops: ExpeditionStop[]) {
+  // Only render the historic sea route: Antwerpen → De Belgica Expeditie.
+  // Koning Boudewijn (1958) and Princess Elisabeth (2007) are separate
+  // historical milestones from different eras and are NOT connected by a line.
   const segments: [ExpeditionStop, ExpeditionStop][] = [
     [stops[0], stops[1]],
-    [stops[1], stops[2]],
   ];
   return segments.flatMap(([start, end], si) =>
     Array.from({ length: 72 }, (_, i) => {
@@ -204,10 +206,10 @@ function generateFootstepRoute(): FootstepData[] {
 
   for (let i = 0; i < NUM_FOOTSTEPS; i++) {
     const t         = i / (NUM_FOOTSTEPS - 1);
-    // Single southward arc: peaks at t=0.5 deep into the continental interior
-    // (Filchner Ice Shelf ~lat −77°, lon −21°) then returns to the station.
-    // Replaces the original S-curve whose northern lobe looped over open ocean.
-    const deviation = 9.0 * Math.sin(t * Math.PI);
+    // Subtle lateral sway only — the traverse is a short local walk between
+    // two stations on the same continental shelf, so we stay on the corridor
+    // and never deviate over open ocean.
+    const deviation = 0.45 * Math.sin(t * Math.PI);
 
     const lat = LANDING_LAT + dLat * t + perpLat * deviation;
     const lon = LANDING_LON + dLon * t + perpLon * deviation;
@@ -215,7 +217,7 @@ function generateFootstepRoute(): FootstepData[] {
     // Reference point for heading (next step, or previous for the final step)
     const refIdx = i < NUM_FOOTSTEPS - 1 ? i + 1 : i - 1;
     const tRef   = refIdx / (NUM_FOOTSTEPS - 1);
-    const devRef = 9.0 * Math.sin(tRef * Math.PI);
+    const devRef = 0.45 * Math.sin(tRef * Math.PI);
     const latRef = LANDING_LAT + dLat * tRef + perpLat * devRef;
     const lonRef = LANDING_LON + dLon * tRef + perpLon * devRef;
 
@@ -268,8 +270,11 @@ function getPassage(progress: number): Passage {
 const LAND_START = 0.965;
 // Princess Elisabeth Station (Utsteinen, Koningin Maudland)
 const STATION_LAT = -71.9502, STATION_LON = 23.347;
-// Belgica expedition Antarctic landing site (western Antarctic Peninsula)
-const LANDING_LAT = -64.9, LANDING_LON = -63.0;
+// Local Antarctic traverse: from Basis Koning Boudewijn (1958, coast of
+// Prinses Ragnhildkust) to Princess Elisabeth Station (2007, inland Utsteinen).
+// Both sit on the Dronning Maud Land continental shelf — the footstep path
+// therefore stays entirely on the Antarctic landmass and never crosses ocean.
+const LANDING_LAT = -70.43, LANDING_LON = 20.0;
 const NUM_FOOTSTEPS = 34;
 
 // Antarctische bergtoppen langs de route (realistischer gespreide locaties)
@@ -538,23 +543,34 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
                 <sphereGeometry args={[active ? 0.075 : 0.062, 32, 32]} />
                 <meshBasicMaterial color={coreColor} />
               </mesh>
-              {available && (
-                <Html center distanceFactor={14} position={[0, 0.26, 0]} className="pointer-events-none select-none">
-                  <div style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                    <span style={{
-                      fontSize: isStation ? "10px" : "11px",
-                      fontWeight: 600,
-                      color: labelColor,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
-                      lineHeight: 1,
-                    }}>
-                      {stop.name}
-                    </span>
-                  </div>
-                </Html>
-              )}
+              {available && (() => {
+                // Stagger label vertical offsets so Boudewijn (1958) and
+                // Elisabeth (2007) — which sit only ~2° apart in Dronning
+                // Maud Land — never overlap on screen.
+                const labelOffset: Record<HotspotId, [number, number, number]> = {
+                  antwerp:   [0,  0.30, 0],
+                  belgica:   [0,  0.30, 0],
+                  boudewijn: [0,  0.40, 0],
+                  elisabeth: [0, -0.34, 0],
+                };
+                return (
+                  <Html center distanceFactor={14} position={labelOffset[stop.id]} className="pointer-events-none select-none">
+                    <div style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                      <span style={{
+                        fontSize: isStation ? "10px" : "11px",
+                        fontWeight: 600,
+                        color: labelColor,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
+                        lineHeight: 1,
+                      }}>
+                        {stop.name}
+                      </span>
+                    </div>
+                  </Html>
+                );
+              })()}
             </group>
           );
         })}
