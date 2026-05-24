@@ -165,30 +165,51 @@
       linear-gradient(160deg, oklch(0.07 0.025 255) 0%, oklch(0.09 0.030 248) 40%, oklch(0.05 0.018 260) 100%);
   }
 
-  /* ── Dark glass panels — strong blur, globe visible behind ── */
+  /* ── Dark glass panels — museum-grade depth ── */
   .museum-glass {
-    background: oklch(0.08 0.02 248 / 52%);
-    border: 1px solid oklch(1 0 0 / 12%);
+    background: oklch(0.09 0.022 248 / 64%);
+    border: 1px solid oklch(1 0 0 / 15%);
     box-shadow:
-      0 20px 60px oklch(0 0 0 / 50%),
-      inset 0 1px 0 oklch(1 0 0 / 10%);
-    backdrop-filter: blur(24px) saturate(130%);
+      0 24px 64px oklch(0 0 0 / 58%),
+      0 8px 24px oklch(0 0 0 / 30%),
+      inset 0 1px 0 oklch(1 0 0 / 18%),
+      inset 0 -1px 0 oklch(0 0 0 / 14%);
+    backdrop-filter: blur(28px) saturate(155%);
   }
 
   .museum-panel {
-    background: oklch(0.06 0.018 252 / 58%);
-    border: 1px solid oklch(1 0 0 / 12%);
+    background: oklch(0.07 0.020 252 / 72%);
+    border: 1px solid oklch(1 0 0 / 15%);
     box-shadow:
-      0 28px 80px oklch(0 0 0 / 55%),
-      inset 0 1px 0 oklch(1 0 0 / 10%);
-    backdrop-filter: blur(32px) saturate(140%);
+      0 32px 80px oklch(0 0 0 / 62%),
+      0 12px 32px oklch(0 0 0 / 36%),
+      inset 0 1px 0 oklch(1 0 0 / 20%),
+      inset 0 -1px 0 oklch(0 0 0 / 16%);
+    backdrop-filter: blur(36px) saturate(165%);
   }
 
-  /* ── Tijdlijn — duidelijk en tastbaar (dikker dan voorheen) ── */
+  /* ── Toegankelijkheidsbadges ── */
+  .museum-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid oklch(1 0 0 / 14%);
+    background: oklch(1 0 0 / 7%);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: oklch(0.86 0.008 240);
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  /* ── Tijdlijn — dikker spoor, scherpere glow ── */
   .expedition-range {
     appearance: none;
     width: 100%;
-    height: 4px;
+    height: 6px;
     background: linear-gradient(
       90deg,
       oklch(0.63 0.24 25.2) var(--progress),   /* rode voortgang */
@@ -196,6 +217,12 @@
     );
     outline: none;
     cursor: pointer;
+    border-radius: 999px;
+  }
+
+  .expedition-range:focus-visible {
+    outline: 2px solid oklch(0.63 0.24 25.2 / 65%);
+    outline-offset: 5px;
     border-radius: 999px;
   }
 

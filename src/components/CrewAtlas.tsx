@@ -25,6 +25,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type RoleType = "command" | "science" | "crew";
+type FilterId = "all" | RoleType | "deceased";
 type TabId = "crew" | "science" | "discoveries";
 
 type CrewMember = {
@@ -209,6 +210,65 @@ const avatarGradient: Record<RoleType, string> = {
   crew: "linear-gradient(135deg, oklch(0.34 0.04 248), oklch(0.20 0.03 250))",
 };
 
+// ─── Filter bar config ────────────────────────────────────────────────────────
+type FilterOption = {
+  id: FilterId;
+  label: string;
+  dot: string | null;
+  icon: React.ReactNode | null;
+  inactiveCls: string;
+  activeCls: string;
+  activeGlow: string;
+};
+
+const crewFilterOptions: FilterOption[] = [
+  {
+    id: "all",
+    label: "Alles",
+    dot: "rgba(255,255,255,0.45)",
+    icon: null,
+    inactiveCls: "border-white/12 bg-white/5 text-white/50",
+    activeCls:   "border-white/30 bg-white/12 text-white/90",
+    activeGlow:  "0 0 0 1.5px rgba(255,255,255,0.22), 0 0 16px rgba(255,255,255,0.10)",
+  },
+  {
+    id: "command",
+    label: "Commando",
+    dot: "rgb(147,197,253)",
+    icon: null,
+    inactiveCls: "border-blue-400/18 bg-blue-500/8 text-blue-300/60",
+    activeCls:   "border-blue-400/50 bg-blue-500/22 text-blue-200",
+    activeGlow:  "0 0 0 1.5px rgba(96,165,250,0.45), 0 0 16px rgba(96,165,250,0.22)",
+  },
+  {
+    id: "science",
+    label: "Wetenschap",
+    dot: "rgb(94,234,212)",
+    icon: null,
+    inactiveCls: "border-teal-400/18 bg-teal-500/8 text-teal-300/60",
+    activeCls:   "border-teal-400/50 bg-teal-500/22 text-teal-200",
+    activeGlow:  "0 0 0 1.5px rgba(45,212,191,0.45), 0 0 16px rgba(45,212,191,0.22)",
+  },
+  {
+    id: "crew",
+    label: "Bemanning",
+    dot: "rgb(203,213,225)",
+    icon: null,
+    inactiveCls: "border-slate-400/18 bg-slate-500/8 text-slate-300/60",
+    activeCls:   "border-slate-400/45 bg-slate-500/20 text-slate-200",
+    activeGlow:  "0 0 0 1.5px rgba(148,163,184,0.40), 0 0 16px rgba(148,163,184,0.18)",
+  },
+  {
+    id: "deceased",
+    label: "Overleden",
+    dot: null,
+    icon: <Skull className="h-3 w-3" aria-hidden="true" />,
+    inactiveCls: "border-red-400/20 bg-red-400/6 text-red-400/55",
+    activeCls:   "border-red-400/50 bg-red-400/16 text-red-300",
+    activeGlow:  "0 0 0 1.5px rgba(239,68,68,0.45), 0 0 16px rgba(239,68,68,0.22)",
+  },
+];
+
 // ─── Custom tooltip for Recharts ──────────────────────────────────────────────
 function ChartTooltip({
   active,
@@ -250,8 +310,11 @@ function CrewCard({ member, index }: { member: CrewMember; index: number }) {
 
   return (
     <motion.article
+      layout
+      layoutId={member.name}
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18, ease: "easeIn" } }}
       transition={{ duration: 0.5, delay: index * 0.055, ease: [0.22, 1, 0.36, 1] }}
       className="museum-glass flex flex-col gap-4 rounded-xl p-5 focus-within:ring-2 focus-within:ring-white/20"
     >
@@ -368,7 +431,20 @@ function DiscoveryItem({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export function CrewAtlas() {
-  const [activeTab, setActiveTab] = useState<TabId>("crew");
+  const [activeTab, setActiveTab]       = useState<TabId>("crew");
+  const [activeFilter, setActiveFilter] = useState<FilterId>("all");
+
+  const filteredCrew = crewMembers.filter((m) => {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "deceased") return m.deceased === true;
+    return m.roleType === activeFilter;
+  });
+
+  const filterCount = (id: FilterId) => {
+    if (id === "all") return crewMembers.length;
+    if (id === "deceased") return crewMembers.filter((m) => m.deceased).length;
+    return crewMembers.filter((m) => m.roleType === id).length;
+  };
 
   const tabs: Array<{ id: TabId; label: string; icon: React.ReactNode; count?: number }> = [
     { id: "crew", label: "Bemanning", icon: <Users className="h-4 w-4" />, count: crewMembers.length },
@@ -541,33 +617,73 @@ export function CrewAtlas() {
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              {/* Legend */}
-              <div className="mb-6 flex flex-wrap gap-3">
-                {(Object.entries(roleConfig) as Array<[RoleType, (typeof roleConfig)[RoleType]]>).map(
-                  ([key, cfg]) => (
-                    <span
-                      key={key}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] ${cfg.bg} ${cfg.color}`}
-                    >
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: "currentColor" }}
-                        aria-hidden="true"
-                      />
-                      {cfg.label}
-                    </span>
-                  ),
-                )}
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/25 bg-red-400/8 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-red-400/70">
-                  <Skull className="h-2.5 w-2.5" aria-hidden="true" />
-                  Overleden
-                </span>
+              {/* ── Filter bar ── */}
+              <div className="mb-6" role="group" aria-label="Filter bemanningsleden op categorie">
+                <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.36em] text-white/30">
+                  Filter
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {crewFilterOptions.map((f) => {
+                    const isActive = activeFilter === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        aria-pressed={isActive}
+                        onClick={() =>
+                          setActiveFilter((prev) =>
+                            prev === f.id && f.id !== "all" ? "all" : f.id,
+                          )
+                        }
+                        className={`inline-flex min-h-[48px] items-center gap-2 rounded-full border px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-[0.96] ${isActive ? f.activeCls : f.inactiveCls}`}
+                        style={isActive ? { boxShadow: f.activeGlow } : undefined}
+                      >
+                        {f.dot !== null ? (
+                          <span
+                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                            style={{ background: f.dot }}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          f.icon
+                        )}
+                        {f.label}
+                        <span
+                          className="rounded-full px-1.5 py-0.5 text-[9px] font-medium tabular-nums transition-colors duration-200"
+                          style={{
+                            background: isActive
+                              ? "rgba(255,255,255,0.12)"
+                              : "rgba(255,255,255,0.06)",
+                            color: isActive
+                              ? "rgba(255,255,255,0.80)"
+                              : "rgba(255,255,255,0.28)",
+                          }}
+                        >
+                          {filterCount(f.id)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {crewMembers.map((member, i) => (
-                  <CrewCard key={member.name} member={member} index={i} />
-                ))}
+                <AnimatePresence mode="popLayout">
+                  {filteredCrew.length > 0 ? (
+                    filteredCrew.map((member, i) => (
+                      <CrewCard key={member.name} member={member} index={i} />
+                    ))
+                  ) : (
+                    <motion.p
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="col-span-full py-12 text-center text-sm text-white/30"
+                    >
+                      Geen bemanningsleden gevonden voor deze categorie.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.section>
           )}

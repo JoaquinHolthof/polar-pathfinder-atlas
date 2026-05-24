@@ -1,16 +1,47 @@
 import { Html, Line, OrbitControls, Stars, useTexture } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, ChevronRight, MapPin, Thermometer, Timer, Users, Waves, Wind, X } from "lucide-react";
+import {
+  Accessibility, ChevronRight, Eye, Fingerprint,
+  FlaskConical, Languages, MapPin, Thermometer, Timer,
+  Users, Volume2, Waves, Wind, X,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Suspense, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+
+
+// ─── FOTO IMPORTS UIT ASSETS ──────────────────────────────────────────────────
+import imgAdrienGerlache  from "../assets/3141_adrien-de-gerlache.jpg";
+import imgBelgica1        from "../assets/3142_belgica.jpg";
+import imgBelgica2        from "../assets/3146_belgica.jpg";
+import imgAntwerpen1897   from "../assets/5311_belgica-in-antwerpen-1897.jpg";
+import imgInspectie       from "../assets/5316_inspectie-van-de-belgica.jpg";
+import imgAntwerpenInca   from "../assets/5318_belgica-in-antwerpen.jpg";
+import imgIsfjord         from "../assets/5322_isfjord.jpg";
+import imgBelgica3        from "../assets/5602_belgica.jpg";
+import imgScheepsplan     from "../assets/5603_scheepsplan.jpg";
+import imgOostende        from "../assets/8995_de-belgica-in-oostende-in-1905.jpg";
+import imgHerinneringskrt from "../assets/9398_herinneringskaart.jpg";
+import imgBemanning       from "../assets/9399_bemanning-van-de-belgica.jpg";
+import imgAmundsen        from "../assets/12496_roald-amundsen.jpg";
+import imgLecointe        from "../assets/12498_george-lecointe.jpg";
+import imgArctowski       from "../assets/12499_henryck-arctowski.jpg";
+import imgCook            from "../assets/12500_frederick-albert-cook.jpg";
+import imgRacovitza       from "../assets/12501_emile-racovitza.jpg";
+import imgGerlache2       from "../assets/12504_adrien-de-gerlache.jpg";
+import imgDanco           from "../assets/12513_emile-danco.jpg";
+import imgKaart1          from "../assets/32321_lecointe-1903-kaart-1.jpg";
+import imgKaart2          from "../assets/32322_lecointe-1903-kaart-2.jpg";
+import imgArcFig2         from "../assets/32666_arctowski-en-thoulet-1901-fig-2.jpg";
+import imgExpoAntarctica  from "../assets/beelden-uit-de-expo-antarctica.avif";
 
 // ─── Wolkenvrije NASA Blue Marble texture ─────────────────────────────────────
 const EARTH_TEXTURE_URL = "https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type HotspotId = "antwerp" | "cape" | "antarctica";
+type AccessibilityTag = "wheelchair" | "audio" | "low-sensory" | "sign-language" | "braille";
+type HotspotId = "antwerp" | "belgica" | "boudewijn" | "elisabeth";
 
 type ExpeditionStop = {
   id: HotspotId;
@@ -26,6 +57,7 @@ type ExpeditionStop = {
   note: string;
   facts: string[];
   photos: string[];
+  accessibility: AccessibilityTag[];
 };
 
 type Passage = {
@@ -43,6 +75,12 @@ type GlobeSceneProps = {
   onHotspotClick: (stop: ExpeditionStop) => void;
 };
 
+type FootstepData = {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  isLeft: boolean;
+};
+
 // ─── Expeditiedata ────────────────────────────────────────────────────────────
 const expeditionStops: ExpeditionStop[] = [
   {
@@ -50,66 +88,74 @@ const expeditionStops: ExpeditionStop[] = [
     name: "Antwerpen",
     label: "Vertrekhaven",
     date: "16 aug 1897",
-    lat: 51.2194,
-    lon: 4.4025,
-    progress: 0.04,
-    temperature: "7°C",
-    wind: "12 kn",
-    duration: "0 weken",
-    note: "De Belgica verlaat Antwerpen op 16 augustus 1897 onder leiding van Adrien de Gerlache. Een bemanning van veertien man en zeven wetenschappers gaat de poolgeschiedenis in.",
+    lat: 51.2194, lon: 4.4025, progress: 0.04,
+    temperature: "7°C", wind: "12 kn", duration: "0 weken",
+    note: "De Belgica verlaat Antwerpen onder leiding van Adrien de Gerlache. Een bemanning van veertien man en zeven wetenschappers gaat de poolgeschiedenis in.",
     facts: [
       "Eerste Belgische wetenschappelijke poolexpeditie",
       "Route via Atlantische Oceaan naar het zuiden",
       "Roald Amundsen diende als eerste stuurman",
     ],
-    photos: ["Belgica in de haven", "Bemanning aan dek", "Instrumenten", "Vertrekmoment"],
+    photos: [imgAntwerpen1897, imgAntwerpenInca, imgAdrienGerlache, imgInspectie, imgBemanning, imgScheepsplan],
+    accessibility: ["wheelchair", "audio", "low-sensory", "sign-language"],
+  },
+ {
+    id: "belgica",
+    name: "De Belgica Expeditie",
+    label: "Fase 1: 1897 - 1899",
+    date: "16 aug 1897",
+    lat: -64.05, lon: -62.97, progress: 0.04, 
+    temperature: "−43°C", wind: "68 kn", duration: "377 dagen",
+    note: "De allereerste expeditie ooit die gedwongen overwintert in het Antarctische pakijs onder leiding van Adrien de Gerlache. De bemanning gaat hiermee de poolgeschiedenis in.",
+    facts: [
+      "Eerste overwintering ooit onder de Zuidpoolcirkel aan boord van de Belgica",
+      "Roald Amundsen diende als eerste stuurman en Frederick Cook als arts",
+      "Cruciale eerste meteorologische en magnetische observaties verzameld",
+    ],
+    photos: [imgAntwerpen1897, imgAdrienGerlache, imgBemanning, imgBelgica2, imgCook, imgAmundsen],
+    accessibility: ["wheelchair", "audio", "low-sensory", "sign-language"],
   },
   {
-    id: "cape",
-    name: "Kaapstad",
-    label: "Bevoorrading",
-    date: "22 okt 1897",
-    lat: -33.9249,
-    lon: 18.4241,
-    progress: 0.55,
-    temperature: "15°C",
-    wind: "24 kn",
-    duration: "12 weken",
-    note: "Laatste grote zuidelijke havenstop voor de oversteek naar de Zuidelijke IJszee. Scheepsreparaties en aanvulling van proviand voor de gevaarlijke oversteek.",
+    id: "boudewijn",
+    name: "Basis Koning Boudewijn",
+    label: "Fase 2: 1958 - 1967",
+    date: "1 jan 1958",
+    lat: -70.43, lon: 20.0, progress: 0.55,
+    temperature: "−25°C", wind: "45 kn", duration: "9 jaar",
+    note: "Opgericht door Gaston de Gerlache (zoon van) tijdens het Internationaal Geofysisch Jaar. Dit markeerde de terugkeer van België naar wetenschappelijk onderzoek op de Zuidpool.",
     facts: [
-      "Zeventien dagen stop voor reparaties en bevoorrading",
-      "Frederick Cook behandelt zieke bemanningsleden",
-      "Stormwaarschuwingen voor de route richting het zuiden",
+      "Gebouwd op het ijs van de Prinses Ragnhildkust",
+      "Focus op atmosferisch onderzoek, meteorologie en glaciologie",
+      "Logistiek ondersteund via cruciale tussenstops in de haven van Kaapstad",
     ],
-    photos: ["Tafelberg vanuit zee", "Inladen voorraden", "Havenkaart", "Scheepslogboek"],
+    photos: [imgBelgica1, imgBelgica3, imgLecointe, imgInspectie, imgScheepsplan, imgKaart1],
+    accessibility: ["wheelchair", "audio"],
   },
   {
-    id: "antarctica",
-    name: "Antarctica",
-    label: "Pakijsgevangenschap",
-    date: "28 feb 1898",
-    lat: -64.05,
-    lon: -62.97,
-    progress: 0.94,
-    temperature: "−43°C",
-    wind: "68 kn",
-    duration: "377 dagen",
-    note: "Op 28 februari 1898 raakt de Belgica vast in het pakijs van de Bellingshausenzee. Het schip overwintert gedwongen — de allereerste expeditie ooit die dit doet.",
+    id: "elisabeth",
+    name: "Princess Elisabeth Antarctica",
+    label: "Fase 3: 2007 - Heden",
+    date: "heden",
+    lat: -71.95, lon: 26.0, progress: 1.0,
+    temperature: "−35°C", wind: "38 kn", duration: "permanent",
+    note: "Het Belgische Princess Elisabeth Antarctica Station is het eerste zero-emissie poolonderzoeksstation ter wereld. Het eert de nalatenschap van de vroege pioniers met hypermodern klimaatonderzoek.",
     facts: [
-      "Eerste overwintering ooit onder de Zuidpoolcirkel",
-      "Cruciale meteorologische en magnetische observaties",
-      "Cook en Amundsen zorgden voor overleving van de bemanning",
+      "Eerste zero-emissie poolstation ter wereld, volledig op wind- en zonne-energie",
+      "Opgericht door de International Polar Foundation onder leiding van Alain Hubert",
+      "Moderne gateway voor internationale wetenschappers via de luchthaven van Kaapstad",
     ],
-    photos: ["Belgica in het pakijs", "Poolnacht", "Wetenschappelijk onderzoek", "Bevrijding 1899"],
+    photos: [imgExpoAntarctica, imgGerlache2, imgKaart2, imgHerinneringskrt, imgOostende, imgIsfjord],
+    accessibility: ["wheelchair", "audio", "low-sensory", "sign-language", "braille"],
   },
 ];
 
 const passages: Array<Passage & { from: number }> = [
-  { from: 0,    label: "Vertrekhaven",       name: "Antwerpen",  date: "aug 1897", temperature: "7°C",   wind: "12 kn", duration: "Week 0" },
-  { from: 0.22, label: "Atlantische passage", name: "Zuidwaarts", date: "sep 1897", temperature: "18°C",  wind: "28 kn", duration: "6 weken" },
-  { from: 0.48, label: "Bevoorrading",        name: "Kaapstad",   date: "okt 1897", temperature: "15°C",  wind: "24 kn", duration: "12 weken" },
-  { from: 0.72, label: "Zuidelijke Oceaan",   name: "Stormzone",  date: "dec 1897", temperature: "2°C",   wind: "54 kn", duration: "20 weken" },
-  { from: 0.92, label: "Pakijsgevangenschap", name: "Antarctica", date: "feb 1898", temperature: "−43°C", wind: "68 kn", duration: "377 dagen" },
+  { from: 0,     label: "Vertrekhaven",       name: "Antwerpen",   date: "aug 1897", temperature: "7°C",   wind: "12 kn", duration: "Week 0" },
+  { from: 0.22,  label: "Atlantische passage", name: "Zuidwaarts",  date: "sep 1897", temperature: "18°C",  wind: "28 kn", duration: "6 weken" },
+  { from: 0.48,  label: "Bevoorrading",        name: "Kaapstad",    date: "okt 1897", temperature: "15°C",  wind: "24 kn", duration: "12 weken" },
+  { from: 0.72,  label: "Zuidelijke Oceaan",   name: "Stormzone",   date: "dec 1897", temperature: "2°C",   wind: "54 kn", duration: "20 weken" },
+  { from: 0.92,  label: "Pakijsgevangenschap", name: "Antarctica",  date: "feb 1898", temperature: "−43°C", wind: "68 kn", duration: "377 dagen" },
+  { from: 0.965, label: "Antarctica Landfase", name: "Wandelroute", date: "1899",     temperature: "−38°C", wind: "42 kn", duration: "—" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -146,12 +192,101 @@ function makeArcPoints(stops: ExpeditionStop[]) {
   );
 }
 
+function generateFootstepRoute(): FootstepData[] {
+  const dLat    = STATION_LAT - LANDING_LAT;   // −7.05 deg  (southward)
+  const dLon    = STATION_LON - LANDING_LON;   // +86.35 deg (eastward)
+  const pathLen = Math.sqrt(dLat * dLat + dLon * dLon);
+  // Unit perpendicular in lat/lon space (rotated 90° CCW from path direction)
+  const perpLat = -dLon / pathLen;
+  const perpLon  =  dLat / pathLen;
+
+  const steps: FootstepData[] = [];
+
+  for (let i = 0; i < NUM_FOOTSTEPS; i++) {
+    const t         = i / (NUM_FOOTSTEPS - 1);
+    // Single southward arc: peaks at t=0.5 deep into the continental interior
+    // (Filchner Ice Shelf ~lat −77°, lon −21°) then returns to the station.
+    // Replaces the original S-curve whose northern lobe looped over open ocean.
+    const deviation = 9.0 * Math.sin(t * Math.PI);
+
+    const lat = LANDING_LAT + dLat * t + perpLat * deviation;
+    const lon = LANDING_LON + dLon * t + perpLon * deviation;
+
+    // Reference point for heading (next step, or previous for the final step)
+    const refIdx = i < NUM_FOOTSTEPS - 1 ? i + 1 : i - 1;
+    const tRef   = refIdx / (NUM_FOOTSTEPS - 1);
+    const devRef = 9.0 * Math.sin(tRef * Math.PI);
+    const latRef = LANDING_LAT + dLat * tRef + perpLat * devRef;
+    const lonRef = LANDING_LON + dLon * tRef + perpLon * devRef;
+
+    const pos    = latLonToVector3(lat,    lon,    2.01);
+    const posRef = latLonToVector3(latRef, lonRef, 2.01);
+    const normal = pos.clone().normalize();
+
+    // Project heading onto the surface tangent plane
+    let fwd = i < NUM_FOOTSTEPS - 1
+      ? posRef.clone().sub(pos)
+      : pos.clone().sub(posRef);
+    fwd.sub(normal.clone().multiplyScalar(fwd.dot(normal))).normalize();
+
+    const right = new THREE.Vector3().crossVectors(normal, fwd).normalize();
+
+    // Quaternion convention: X = right, Y = surface normal (up), Z = forward
+    const baseQuat = new THREE.Quaternion().setFromRotationMatrix(
+      new THREE.Matrix4().makeBasis(right, normal, fwd),
+    );
+
+    // Toe-in: subtle inward rotation around local Y (surface normal)
+    const isLeft = i % 2 === 0;
+    const localToeQuat = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      isLeft ? 0.12 : -0.12,
+    );
+    const finalQuat = baseQuat.clone().multiply(localToeQuat);
+
+    // Alternating lateral offset perpendicular to heading
+    const lateralOffset = right.clone().multiplyScalar((isLeft ? -1 : 1) * 0.009);
+
+    steps.push({
+      position: pos.clone().add(lateralOffset),
+      quaternion: finalQuat,
+      isLeft,
+    });
+  }
+
+  return steps;
+}
+
 function getPassage(progress: number): Passage {
   return passages.reduce<Passage>(
     (cur, p) => (progress >= p.from ? p : cur),
     passages[0],
   );
 }
+
+// ─── Land phase constants ──────────────────────────────────────────────────────
+const LAND_START = 0.965;
+// Princess Elisabeth Station (Utsteinen, Koningin Maudland)
+const STATION_LAT = -71.9502, STATION_LON = 23.347;
+// Belgica expedition Antarctic landing site (western Antarctic Peninsula)
+const LANDING_LAT = -64.9, LANDING_LON = -63.0;
+const NUM_FOOTSTEPS = 34;
+
+// Antarctische bergtoppen langs de route (realistischer gespreide locaties)
+const ANT_PEAKS = [
+  // Schiereiland
+  { lat: -64.8, lon: -64.2, h: 0.055, r: 0.016 },
+  { lat: -65.5, lon: -64.8, h: 0.072, r: 0.020 },
+  // Transantarctisch gebergte, westflank Weddellzee
+  { lat: -67.2, lon: -60.0, h: 0.082, r: 0.019 },
+  { lat: -68.6, lon: -57.5, h: 0.068, r: 0.017 },
+  // Dronning Maud Land bergketens
+  { lat: -71.0, lon:  -8.0, h: 0.090, r: 0.022 },
+  { lat: -72.3, lon:   8.5, h: 0.078, r: 0.018 },
+  { lat: -73.0, lon:  20.0, h: 0.062, r: 0.015 },
+  // Vinson Massief (hoogste top Antarctica)
+  { lat: -78.5, lon: -85.6, h: 0.118, r: 0.026 },
+];
 
 // ─── Globe Shaders ────────────────────────────────────────────────────────────
 const EARTH_VERT = /* glsl */ `
@@ -238,9 +373,9 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
   const groupRef    = useRef<THREE.Group>(null);
   const pathPoints  = useMemo(() => makeArcPoints(expeditionStops), []);
 
-  // Individual halo refs per hotspot for independent pulsing
-  const haloRefs  = useRef<(THREE.Mesh | null)[]>([null, null, null]);
-  const halo2Refs = useRef<(THREE.Mesh | null)[]>([null, null, null]);
+  // Individual halo refs per hotspot for independent pulsing (4: 3 sea + station)
+  const haloRefs  = useRef<(THREE.Mesh | null)[]>([null, null, null, null]);
+  const halo2Refs = useRef<(THREE.Mesh | null)[]>([null, null, null, null]);
 
   const earthMaterial = useMemo(() => {
     earthMap.colorSpace = THREE.SRGBColorSpace;
@@ -265,23 +400,54 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
     [],
   );
 
+  // Zeeroute bevriest zodra de landfase begint
   const visiblePath = useMemo(() => {
-    const count = Math.max(2, Math.ceil(pathPoints.length * progress));
+    const capped = Math.min(progress, LAND_START);
+    const count  = Math.max(2, Math.ceil(pathPoints.length * capped));
     return pathPoints.slice(0, count);
   }, [pathPoints, progress]);
 
+  // Stabiele referenties voor landfase (eenmalig berekend)
+
+  const antPeakData = useMemo(() =>
+    ANT_PEAKS.map(pk => ({
+      pos:  latLonToVector3(pk.lat, pk.lon, 2.0),
+      quat: new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        latLonToVector3(pk.lat, pk.lon, 1.0).normalize(),
+      ),
+      h: pk.h,
+      r: pk.r,
+    })), []);
+
+  // 3D landmark data voor Princess Elisabeth Station
+  const stationLandmarkData = useMemo(() => ({
+    pos:  latLonToVector3(STATION_LAT, STATION_LON, 2.145),
+    quat: new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      latLonToVector3(STATION_LAT, STATION_LON, 1).normalize(),
+    ),
+  }), []);
+
+  const footstepRoute = useMemo(() => generateFootstepRoute(), []);
+
   useFrame(({ camera, clock }) => {
-    // Globe rotation to follow expedition progress
+    // Globe rotation: volgt zeeroute → pant naar station tijdens landfase
     if (groupRef.current) {
-      const idx = Math.min(
-        pathPoints.length - 1,
-        Math.max(0, Math.floor(progress * (pathPoints.length - 1))),
-      );
-      const focusVec = pathPoints[idx].clone().normalize();
-      const target   = new THREE.Quaternion().setFromUnitVectors(
-        focusVec,
-        new THREE.Vector3(0, 0, 1),
-      );
+      let focusVec: THREE.Vector3;
+      if (progress >= LAND_START) {
+        const seaEnd    = pathPoints[pathPoints.length - 1].clone().normalize();
+        const stationV  = latLonToVector3(STATION_LAT, STATION_LON, 2.1).normalize();
+        const t = (progress - LAND_START) / (1 - LAND_START);
+        focusVec = seaEnd.lerp(stationV, t).normalize();
+      } else {
+        const idx = Math.min(
+          pathPoints.length - 1,
+          Math.max(0, Math.floor(progress * (pathPoints.length - 1))),
+        );
+        focusVec = pathPoints[idx].clone().normalize();
+      }
+      const target = new THREE.Quaternion().setFromUnitVectors(focusVec, new THREE.Vector3(0, 0, 1));
       groupRef.current.quaternion.slerp(target, 0.085);
     }
 
@@ -347,67 +513,146 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
 
         {/* Hotspot markers */}
         {expeditionStops.map((stop, i) => {
-          const available = progress + 0.035 >= stop.progress;
-          const active    = activeStop?.id === stop.id;
-          const pos       = latLonToVector3(stop.lat, stop.lon, 2.28);
+          const available  = progress + 0.035 >= stop.progress;
+          const active     = activeStop?.id === stop.id;
+          const pos        = latLonToVector3(stop.lat, stop.lon, 2.28);
+          const isStation  = stop.id === "elisabeth";
+          const coreColor  = isStation ? (active ? "#7dd3fc" : "#38bdf8") : (active ? "#ff8080" : "#ef4444");
+          const haloColor  = isStation ? "#38bdf8" : "#ef4444";
+          const labelColor = isStation ? "rgba(125,211,252,0.92)" : "rgba(255,255,255,0.92)";
 
           return (
-            <group
-              key={stop.id}
-              position={pos}
-              visible={available}
-              onClick={() => onHotspotClick(stop)}
-            >
-              {/* Outer ripple halo 2 (large, slow) */}
+            <group key={stop.id} position={pos} visible={available} onClick={() => onHotspotClick(stop)}>
+              {/* Outer ripple halo */}
               <mesh ref={(el) => { halo2Refs.current[i] = el; }}>
                 <sphereGeometry args={[0.22, 32, 32]} />
-                <meshBasicMaterial color="#ef4444" transparent opacity={0.10} />
+                <meshBasicMaterial color={haloColor} transparent opacity={0.10} />
               </mesh>
-
-              {/* Inner ripple halo (medium, faster) */}
+              {/* Inner ripple halo */}
               <mesh ref={(el) => { haloRefs.current[i] = el; }}>
                 <sphereGeometry args={[0.155, 32, 32]} />
-                <meshBasicMaterial color="#ef4444" transparent opacity={0.20} />
+                <meshBasicMaterial color={haloColor} transparent opacity={0.20} />
               </mesh>
-
-              {/* Solid core dot */}
+              {/* Core dot */}
               <mesh>
                 <sphereGeometry args={[active ? 0.075 : 0.062, 32, 32]} />
-                <meshBasicMaterial color={active ? "#ff8080" : "#ef4444"} />
+                <meshBasicMaterial color={coreColor} />
               </mesh>
-
-              {/* Readable label — white text, drop shadow, no balloon */}
-              <Html
-                center
-                distanceFactor={14}
-                position={[0, 0.26, 0]}
-                className="pointer-events-none select-none"
-              >
-                <div
-                  style={{
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "11px",
+              {available && (
+                <Html center distanceFactor={14} position={[0, 0.26, 0]} className="pointer-events-none select-none">
+                  <div style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                    <span style={{
+                      fontSize: isStation ? "10px" : "11px",
                       fontWeight: 600,
-                      color: "rgba(255,255,255,0.92)",
+                      color: labelColor,
                       letterSpacing: "0.14em",
                       textTransform: "uppercase",
-                      textShadow:
-                        "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
+                      textShadow: "0 1px 3px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.8), 0 0 24px rgba(0,0,0,0.5)",
                       lineHeight: 1,
-                    }}
-                  >
-                    {stop.name}
-                  </span>
-                </div>
-              </Html>
+                    }}>
+                      {stop.name}
+                    </span>
+                  </div>
+                </Html>
+              )}
             </group>
           );
         })}
+
+        {/* ── Antarctische bergtoppen — fade in vanaf progress 0.88 ── */}
+        {antPeakData.map((pk, i) => {
+          const opacity = THREE.MathUtils.clamp((progress - 0.88) * 10, 0, 1);
+          return (
+            <group key={`peak-${i}`} position={pk.pos} quaternion={pk.quat}>
+              {/* Donkere rotsbasis */}
+              <mesh>
+                <coneGeometry args={[pk.r * 1.15, pk.h * 0.55, 6]} />
+                <meshBasicMaterial color="#6b8ca8" transparent opacity={opacity * 0.52} />
+              </mesh>
+              {/* IJssneeuw-toplaag (hogere, smalle kegel) */}
+              <mesh position={[0, pk.h * 0.22, 0]}>
+                <coneGeometry args={[pk.r * 0.62, pk.h * 0.55, 5]} />
+                <meshBasicMaterial color="#deeef8" transparent opacity={opacity * 0.72} />
+              </mesh>
+              {/* Glanzende piek (scherpe punt) */}
+              <mesh position={[0, pk.h * 0.58, 0]}>
+                <coneGeometry args={[pk.r * 0.22, pk.h * 0.30, 4]} />
+                <meshBasicMaterial color="#f0f8ff" transparent opacity={opacity * 0.85} />
+              </mesh>
+            </group>
+          );
+        })}
+
+        {/* ── Princess Elisabeth Station 3D landmark ── */}
+        {(() => {
+          const opacity = THREE.MathUtils.clamp((progress - LAND_START) * 10, 0, 1);
+          if (opacity <= 0) return null;
+          return (
+            <group
+              key="pe-station"
+              position={stationLandmarkData.pos}
+              quaternion={stationLandmarkData.quat}
+            >
+              {/* Vier stalen pijlers */}
+              {([-0.022, -0.007, 0.007, 0.022] as const).map((x, i) => (
+                <mesh key={i} position={[x, 0.011, 0]}>
+                  <cylinderGeometry args={[0.0028, 0.0035, 0.022, 6]} />
+                  <meshBasicMaterial color="#94a3b8" transparent opacity={opacity * 0.88} />
+                </mesh>
+              ))}
+              {/* Hoofdgebouw — aerodynamisch langwerpig (oost-west georiënteerd) */}
+              <mesh position={[0, 0.024, 0]}>
+                <boxGeometry args={[0.068, 0.013, 0.028]} />
+                <meshBasicMaterial color="#7dd3fc" transparent opacity={opacity * 0.78} />
+              </mesh>
+              {/* Zonnepanelen-dak licht hellend (zonoptimalisatie) */}
+              <mesh position={[0, 0.033, 0.004]} rotation={[0.30, 0, 0]}>
+                <boxGeometry args={[0.065, 0.003, 0.034]} />
+                <meshBasicMaterial color="#bae6fd" transparent opacity={opacity * 0.65} />
+              </mesh>
+              {/* Windturbines (twee kleine cylinders) */}
+              {([-0.025, 0.025] as const).map((x, i) => (
+                <mesh key={i} position={[x, 0.046, 0]}>
+                  <cylinderGeometry args={[0.0018, 0.0018, 0.020, 8]} />
+                  <meshBasicMaterial color="#e2e8f0" transparent opacity={opacity * 0.75} />
+                </mesh>
+              ))}
+              {/* Gloeiend beacon (ijs-blauw) */}
+              <mesh position={[0, 0.052, 0]}>
+                <sphereGeometry args={[0.010, 16, 16]} />
+                <meshBasicMaterial color="#38bdf8" transparent opacity={opacity * 0.70} />
+              </mesh>
+              {/* Buitenste halo-ring */}
+              <mesh position={[0, 0.052, 0]}>
+                <sphereGeometry args={[0.018, 16, 16]} />
+                <meshBasicMaterial color="#7dd3fc" transparent opacity={opacity * 0.22} />
+              </mesh>
+            </group>
+          );
+        })()}
+
+        {/* ── Footstep path across the Antarctic landmass ── */}
+        {progress >= LAND_START && (() => {
+          const landT = (progress - LAND_START) / (1 - LAND_START);
+          return footstepRoute.map((step, i) => {
+            const stepT = landT * NUM_FOOTSTEPS - i;
+            if (stepT <= 0) return null;
+            const freshness  = Math.min(1, stepT);
+            const trailDecay = Math.exp(-0.4 * Math.max(0, stepT - 1));
+            const opacity    = THREE.MathUtils.lerp(0.18, 0.88, freshness) * (0.3 + 0.7 * trailDecay);
+            const color      = _DARK_RED.clone().lerp(_BRIGHT_RED, trailDecay);
+            return (
+              <FootprintMesh
+                key={i}
+                position={step.position}
+                quaternion={step.quaternion}
+                isLeft={step.isLeft}
+                opacity={opacity}
+                color={color}
+              />
+            );
+          });
+        })()}
       </group>
 
       <OrbitControls
@@ -418,6 +663,73 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
         maxPolarAngle={2.1}
       />
     </>
+  );
+}
+
+// ─── Footprint shared geometry & color palette ────────────────────────────────
+// Built once at module load — no GL context needed for Shape / EllipseCurve
+const FOOTSTEP_SOLE_SHAPE = (() => {
+  const shape = new THREE.Shape();
+  shape.setFromPoints(
+    new THREE.EllipseCurve(0, 0, 0.009, 0.016, 0, Math.PI * 2, false, 0).getPoints(24),
+  );
+  return shape;
+})();
+const _DARK_RED   = new THREE.Color("#991b1b");
+const _BRIGHT_RED = new THREE.Color("#ef4444");
+
+// ─── FootprintMesh ────────────────────────────────────────────────────────────
+function FootprintMesh({
+  position,
+  quaternion,
+  isLeft,
+  opacity,
+  color,
+}: {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  isLeft: boolean;
+  opacity: number;
+  color: THREE.Color;
+}) {
+  // Heel arch offset: left heel tilts inward (+X), right heel tilts inward (-X)
+  const heelX = isLeft ? 0.002 : -0.002;
+
+  return (
+    <group position={position} quaternion={quaternion}>
+      {/*
+        Rotate −90° around local X: the ShapeGeometry lives in the XY plane,
+        which after this rotation becomes the XZ tangent plane of the globe.
+        Result: sole lies perfectly flat on the surface.
+        X (inner) → right direction   (across gait width)
+        Y (inner) → backward direction (−Z outer = heel end)
+        Z (inner) → outward normal    (lifted off surface)
+      */}
+      <group rotation={[-Math.PI / 2, 0, 0]}>
+        {/* Sole — ellipse: short axis = gait width, long axis = travel direction */}
+        <mesh>
+          <shapeGeometry args={[FOOTSTEP_SOLE_SHAPE]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={opacity}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        {/* Heel — smaller circle at the back of the sole (+Y inner = heel end) */}
+        <mesh position={[heelX, 0.010, 0]}>
+          <circleGeometry args={[0.006, 16]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={opacity * 0.72}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </group>
+    </group>
   );
 }
 
@@ -443,16 +755,16 @@ function DataCard({
   value: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-2.5">
-      <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/45">
+    /* min-h-[52px] guarantees WCAG touch-target height */
+    <div className="flex min-h-[52px] flex-col justify-center gap-1 rounded-xl border border-white/12 bg-white/6 px-3.5 py-3">
+      <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.26em] text-white/55">
         {icon}
         {label}
       </span>
-      <span className="text-base font-medium text-white">{value}</span>
+      <span className="text-[15px] font-semibold leading-tight text-white">{value}</span>
     </div>
   );
 }
-
 // ─── Main touchwall ───────────────────────────────────────────────────────────
 export function ExpeditionTouchwall() {
   const [progress, setProgress]     = useState(0);
@@ -486,7 +798,7 @@ export function ExpeditionTouchwall() {
         <Link
           to="/crew"
           aria-label="Bekijk de bemanning en wetenschappelijke atlas"
-          className="flex items-center gap-2.5 rounded-full border border-white/12 bg-black/30 px-4 py-2.5 text-[10px] font-medium uppercase tracking-[0.24em] text-white/55 backdrop-blur-sm transition-all duration-200 hover:border-white/25 hover:bg-white/10 hover:text-white/85 focus:outline-none focus:ring-2 focus:ring-white/25"
+          className="flex h-11 items-center gap-2.5 rounded-full border border-white/15 bg-black/38 px-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/62 backdrop-blur-sm transition-all duration-200 hover:border-white/28 hover:bg-white/12 hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-white/25 active:scale-95"
         >
           <Users className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Crew & Science Atlas</span>
@@ -498,13 +810,16 @@ export function ExpeditionTouchwall() {
           HEADER — top-left corner
       ════════════════════════════════════════════ */}
       <header className="pointer-events-none absolute left-0 top-0 z-20 px-10 py-9 md:px-12 md:py-10">
-        <p className="text-[11px] font-medium uppercase tracking-[0.36em] text-white/40">
+        {/* Supertitle — route breadcrumb */}
+        <p className="text-[10px] font-semibold uppercase tracking-[0.44em] text-white/55">
           Antwerpen — Kaapstad — Antarctica
         </p>
-        <h1 className="mt-2 text-5xl font-thin uppercase leading-none tracking-widest md:text-6xl">
+        {/* Main title — large, ultra-light, museum presence */}
+        <h1 className="mt-2 text-5xl font-thin uppercase leading-none tracking-[0.0em] md:text-7xl">
           Belgica Expedition
         </h1>
-        <p className="mt-1.5 text-sm font-medium tracking-[0.22em] text-white/35">
+        {/* Date — tertiary metadata */}
+        <p className="mt-2 text-[11px] font-medium tracking-[0.32em] text-white/42">
           1897 — 1899
         </p>
       </header>
@@ -521,47 +836,51 @@ export function ExpeditionTouchwall() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            className="museum-glass w-56 rounded-lg p-5 lg:w-64"
+            className="museum-glass w-56 rounded-xl p-5 lg:w-64"
           >
-            <p className="text-[10px] font-medium uppercase tracking-[0.36em] text-white/40">
+            {/* Section label — smallest hierarchy tier */}
+            <p className="text-[9px] font-semibold uppercase tracking-[0.40em] text-white/52">
               Huidige passage
             </p>
-            <p className="mt-3 text-xl font-thin leading-snug tracking-wide">
+            {/* Passage title — prominent, ultra-light */}
+            <p className="mt-3 text-xl font-extralight leading-snug tracking-wide text-white">
               {currentPassage.label}
             </p>
-            <p className="mt-0.5 text-sm font-medium text-white/55">
+            {/* Sub-location — secondary contrast */}
+            <p className="mt-0.5 text-sm font-medium text-white/68">
               {currentPassage.name}
             </p>
 
-            <div className="my-4 h-px w-full bg-white/10" />
+            {/* Gradient divider — softer than solid */}
+            <div className="my-4 h-px w-full bg-gradient-to-r from-transparent via-white/18 to-transparent" />
 
-            {/* Data rows */}
-            <div className="space-y-2.5">
+            {/* Data rows — improved contrast */}
+            <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 font-medium text-white/45">
+                <span className="flex items-center gap-2 font-medium text-white/58">
                   <Thermometer className="h-3.5 w-3.5 text-red-400" />
                   Temperatuur
                 </span>
-                <span className="font-medium text-white">{currentPassage.temperature}</span>
+                <span className="font-semibold text-white">{currentPassage.temperature}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 font-medium text-white/45">
-                  <Wind className="h-3.5 w-3.5 text-blue-400" />
+                <span className="flex items-center gap-2 font-medium text-white/58">
+                  <Wind className="h-3.5 w-3.5 text-sky-400" />
                   Windkracht
                 </span>
-                <span className="font-medium text-white">{currentPassage.wind}</span>
+                <span className="font-semibold text-white">{currentPassage.wind}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 font-medium text-white/45">
-                  <Timer className="h-3.5 w-3.5 text-white/35" />
+                <span className="flex items-center gap-2 font-medium text-white/58">
+                  <Timer className="h-3.5 w-3.5 text-white/48" />
                   Reisduur
                 </span>
-                <span className="font-medium text-white">{currentPassage.duration}</span>
+                <span className="font-semibold text-white">{currentPassage.duration}</span>
               </div>
             </div>
 
             <div className="mt-4 border-t border-white/10 pt-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/30">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-white/40">
                 {currentPassage.date}
               </p>
             </div>
@@ -573,7 +892,7 @@ export function ExpeditionTouchwall() {
           RIGHT PANEL — hotspot detail
           (slides in from extreme right)
       ════════════════════════════════════════════ */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {activeStop && (
           <motion.aside
             key={activeStop.id}
@@ -584,21 +903,25 @@ export function ExpeditionTouchwall() {
             className="museum-panel absolute right-8 top-1/2 z-30 flex max-h-[82vh] w-[min(340px,calc(100vw-4rem))] -translate-y-1/2 flex-col overflow-hidden rounded-xl lg:right-10 lg:w-[360px]"
           >
             {/* Header band */}
-            <div className="flex-none border-b border-white/10 px-6 pt-6 pb-4">
+            <div className="flex-none border-b border-white/10 px-6 pt-6 pb-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-medium uppercase tracking-[0.34em] text-red-400">
-                    Hotspot — {activeStop.label}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-thin uppercase leading-tight tracking-wide">
+                  {/* Label pill — colored badge, not plain text */}
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/12 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-red-300">
+                    <MapPin className="h-2.5 w-2.5" aria-hidden="true" />
+                    {activeStop.label}
+                  </span>
+                  {/* Location name — larger, museum-weight */}
+                  <h2 className="mt-2.5 text-3xl font-extralight uppercase leading-tight tracking-widest text-white">
                     {activeStop.name}
                   </h2>
-                  <p className="mt-1 text-sm font-medium text-white/45">{activeStop.date}</p>
+                  <p className="mt-1 text-[11px] font-semibold tracking-[0.22em] text-white/52">{activeStop.date}</p>
                 </div>
+                {/* Close button — min 44×44px touch target */}
                 <button
-                  aria-label="Sluit"
+                  aria-label="Sluit detailpaneel"
                   onClick={() => setActiveStop(null)}
-                  className="pointer-events-auto mt-1 flex-none rounded-full border border-white/15 bg-white/8 p-2 text-white/50 transition hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                  className="pointer-events-auto mt-0.5 flex h-11 w-11 flex-none items-center justify-center rounded-full border border-white/15 bg-white/8 text-white/55 transition duration-200 hover:border-white/30 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/25 active:scale-95"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -606,7 +929,7 @@ export function ExpeditionTouchwall() {
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
               {/* Data snapshots */}
               <div className="grid grid-cols-3 gap-2">
@@ -627,40 +950,29 @@ export function ExpeditionTouchwall() {
                 />
               </div>
 
-              {/* Toelichting */}
-              <p className="text-sm font-medium leading-6 text-white/60">
+              {/* Toelichting — WCAG AA contrast: text-white/75 ≈ 6.2:1 on dark bg */}
+              <p className="text-sm font-normal leading-7 text-white/75">
                 {activeStop.note}
               </p>
 
               {/* Foto-galerij */}
               <div>
-                <p className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
+                <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.34em] text-white/52">
                   Historische foto's
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {activeStop.photos.map((photo, index) => (
                     <button
-                      key={photo}
-                      className="pointer-events-auto group relative aspect-[4/3] overflow-hidden rounded-md border border-white/10 bg-white/5 transition hover:border-white/25 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-red-400/50"
+                      key={index}
+                      className="pointer-events-auto group relative aspect-[4/3] overflow-hidden rounded-xl border border-white/10 bg-white/5 transition duration-200 hover:border-white/30 hover:shadow-lg hover:shadow-black/45 focus:outline-none focus:ring-2 focus:ring-red-400/60 active:scale-[0.97]"
                     >
-                      {/* Placeholder gradient simulating a photo */}
-                      <div
-                        className="absolute inset-0 opacity-40"
-                        style={{
-                          background: [
-                            "linear-gradient(135deg,#1e3a5f,#0a1628)",
-                            "linear-gradient(135deg,#2d4a1e,#0f1f09)",
-                            "linear-gradient(135deg,#3d2a0a,#1a1008)",
-                            "linear-gradient(135deg,#1a2a3d,#0a0f1a)",
-                          ][index % 4],
-                        }}
+                      <img
+                        src={photo}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover object-center transition duration-300 group-hover:scale-105 group-hover:brightness-110"
                       />
-                      <div className="absolute inset-0 flex flex-col justify-end p-2">
-                        <Camera className="mb-1 h-3.5 w-3.5 text-white/30 transition group-hover:text-white/50" />
-                        <span className="text-[9px] font-medium uppercase tracking-[0.16em] leading-tight text-white/50">
-                          {photo}
-                        </span>
-                      </div>
+                      {/* Hover overlay — depth cue */}
+                      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition duration-200 group-hover:opacity-100" />
                     </button>
                   ))}
                 </div>
@@ -668,18 +980,48 @@ export function ExpeditionTouchwall() {
 
               {/* Feiten */}
               <div>
-                <p className="mb-2.5 text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
+                <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.34em] text-white/52">
                   Historische feiten
                 </p>
-                <div className="space-y-2.5">
+                <div className="space-y-0">
                   {activeStop.facts.map((fact) => (
-                    <div key={fact} className="flex gap-3 border-t border-white/8 pt-2.5">
-                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-red-400/70" />
-                      <p className="text-sm font-medium leading-5 text-white/55">{fact}</p>
+                    <div key={fact} className="flex gap-3 border-t border-white/8 py-2.5">
+                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                      <p className="text-sm font-normal leading-6 text-white/72">{fact}</p>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* ── Toegankelijkheidsbadges ── */}
+              {activeStop.accessibility.length > 0 && (
+                <div>
+                  <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.34em] text-white/52">
+                    Toegankelijkheid
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeStop.accessibility.map((tag) => {
+                      const badges: Record<AccessibilityTag, { icon: React.ReactNode; label: string; cls: string }> = {
+                        wheelchair:       { icon: <Accessibility className="h-3 w-3" />, label: "Rolstoel",     cls: "text-sky-300 border-sky-400/30 bg-sky-400/10" },
+                        audio:            { icon: <Volume2 className="h-3 w-3" />,       label: "Audio",        cls: "text-amber-300 border-amber-400/30 bg-amber-400/10" },
+                        "low-sensory":    { icon: <Eye className="h-3 w-3" />,            label: "Laag-sensorisch", cls: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10" },
+                        "sign-language":  { icon: <Languages className="h-3 w-3" />,      label: "Gebarentaal", cls: "text-violet-300 border-violet-400/30 bg-violet-400/10" },
+                        braille:          { icon: <Fingerprint className="h-3 w-3" />,    label: "Braille",     cls: "text-pink-300 border-pink-400/30 bg-pink-400/10" },
+                      };
+                      const b = badges[tag];
+                      return (
+                        <span
+                          key={tag}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] ${b.cls}`}
+                        >
+                          {b.icon}
+                          {b.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.aside>
         )}
@@ -696,7 +1038,7 @@ export function ExpeditionTouchwall() {
           {/* Progress row */}
           <div className="mb-5 flex items-end justify-between gap-6">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.32em] text-white/40">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.40em] text-white/52">
                 Tijdlijn route
               </p>
               <AnimatePresence mode="wait">
@@ -706,7 +1048,7 @@ export function ExpeditionTouchwall() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-1.5 text-xl font-thin tracking-wide"
+                  className="mt-1.5 text-[22px] font-extralight tracking-wide text-white"
                 >
                   {currentPassage.label}
                 </motion.p>
@@ -714,9 +1056,9 @@ export function ExpeditionTouchwall() {
             </div>
             <div className="flex items-center gap-3">
               <Waves className="h-4 w-4 text-blue-400/50" />
-              <span className="text-3xl font-thin tabular-nums text-white/70">
+              <span className="text-3xl font-extralight tabular-nums text-white">
                 {Math.round(progress * 100)}
-                <span className="text-lg text-white/35">%</span>
+                <span className="text-lg font-light text-white/45">%</span>
               </span>
             </div>
           </div>
@@ -742,14 +1084,14 @@ export function ExpeditionTouchwall() {
             {passages.map((p) => (
               <span
                 key={p.from}
-                className="text-[9px] font-medium uppercase tracking-[0.18em] text-white/25"
+                className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/38"
               >
                 {p.date}
               </span>
             ))}
           </div>
 
-          {/* Stop buttons */}
+          {/* Stop buttons — min 44px touch target each */}
           <div className="mt-4 flex justify-between">
             {expeditionStops.map((stop) => {
               const reached = progress + 0.035 >= stop.progress;
@@ -760,16 +1102,16 @@ export function ExpeditionTouchwall() {
                     setProgress(stop.progress);
                     setActiveStop(stop);
                   }}
-                  className="pointer-events-auto group flex flex-col items-center gap-1.5 transition focus:outline-none"
+                  className="pointer-events-auto group flex min-h-[44px] flex-col items-center justify-center gap-1.5 rounded-lg px-2 py-1 transition duration-200 hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95"
                 >
                   <MapPin
-                    className="h-4 w-4 transition-colors"
+                    className="h-4 w-4 transition-colors duration-200"
                     style={{ color: reached ? "#ef4444" : "rgba(255,255,255,0.22)" }}
                   />
                   <span
-                    className="text-[10px] font-medium uppercase tracking-[0.22em] transition-colors"
+                    className="text-[9px] font-semibold uppercase tracking-[0.24em] transition-colors duration-200"
                     style={{
-                      color: reached ? "rgba(255,255,255,0.75)" : "rgba(255,255,255,0.28)",
+                      color: reached ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.30)",
                     }}
                   >
                     {stop.name}
