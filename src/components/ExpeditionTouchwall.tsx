@@ -362,9 +362,10 @@ function EarthGlobe({ progress, activeStop, onHotspotClick }: GlobeSceneProps) {
     [],
   );
 
-  // Zeeroute bevriest zodra de landfase begint
+  // Sea route fills 0 → boudewijnStop.progress so the Antwerp→Belgica arc is
+  // complete before the dashed inter-era flight lines appear.
   const visiblePath = useMemo(() => {
-    const capped = Math.min(progress, LAND_START);
+    const capped = Math.min(progress / expeditionStops[2].progress, 1);
     const count  = Math.max(2, Math.ceil(pathPoints.length * capped));
     return pathPoints.slice(0, count);
   }, [pathPoints, progress]);
