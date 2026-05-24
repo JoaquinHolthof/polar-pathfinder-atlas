@@ -170,9 +170,11 @@ function latLonToVector3(lat: number, lon: number, radius = 2.08) {
 }
 
 function makeArcPoints(stops: ExpeditionStop[]) {
+  // Only render the historic sea route: Antwerpen → De Belgica Expeditie.
+  // Koning Boudewijn (1958) and Princess Elisabeth (2007) are separate
+  // historical milestones from different eras and are NOT connected by a line.
   const segments: [ExpeditionStop, ExpeditionStop][] = [
     [stops[0], stops[1]],
-    [stops[1], stops[2]],
   ];
   return segments.flatMap(([start, end], si) =>
     Array.from({ length: 72 }, (_, i) => {
